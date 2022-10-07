@@ -4,6 +4,8 @@ import { Logger } from "matrix-appservice-bridge";
 import { ApiError, ErrCode } from "../api";
 import { GenericWebhookEvent, GenericWebhookEventResult } from "./types";
 import * as xml from "xml2js";
+import { StatusCodes } from "http-status-codes"; 
+
 
 const WEBHOOK_RESPONSE_TIMEOUT = 5000;
 
@@ -26,7 +28,6 @@ export class GenericWebhooksRouter {
         } else {
             body = req.body;
         }
-    
         this.queue.pushWait<GenericWebhookEvent, GenericWebhookEventResult>({
             eventName: 'generic-webhook.event',
             sender: "GithubWebhooks",
@@ -41,13 +42,13 @@ export class GenericWebhooksRouter {
                     next();
                     return;
                 }
-                res.status(404).send({ok: false, error: "Webhook not found"});
+                res.status(StatusCodes.NOT_FOUND).send({ok: false, error: "Webhook not found"});
             } else if (response.successful) {
-                res.status(200).send({ok: true});
+                res.status(StatusCodes.OK).send({ok: true});
             } else if (response.successful === false) {
-                res.status(500).send({ok: false, error: "Failed to process webhook"});
+                res.status(StatusCodes.INTERNAL_SERVER_ERROR).send({ok: false, error: "Failed to process webhook"});
             } else {
-                res.status(202).send({ok: true});
+                res.status(StatusCodes.ACCEPTED).send({ok: true});
             }
         }).catch((err) => {
             log.error(`Failed to emit payload: ${err}`);
@@ -81,7 +82,7 @@ export class GenericWebhooksRouter {
             '/:hookId',
             GenericWebhooksRouter.xmlHandler,
             express.urlencoded({ extended: false }),
-            express.json(),
+            express.json({ type: 'application/json'}),
             express.text({ type: 'text/*'}),
             this.onWebhook.bind(this),
         );
